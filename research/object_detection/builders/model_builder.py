@@ -55,6 +55,7 @@ if tf_version.is_tf2():
   from object_detection.models import center_net_hourglass_feature_extractor
   from object_detection.models import center_net_mobilenet_v2_feature_extractor
   from object_detection.models import center_net_mobilenet_v2_fpn_feature_extractor
+  from object_detection.models import center_net_mobilenet_v3_fpn_feature_extractor
   from object_detection.models import center_net_resnet_feature_extractor
   from object_detection.models import center_net_resnet_v1_fpn_feature_extractor
   from object_detection.models import faster_rcnn_inception_resnet_v2_keras_feature_extractor as frcnn_inc_res_keras
@@ -174,6 +175,12 @@ if tf_version.is_tf2():
           center_net_mobilenet_v2_fpn_feature_extractor.mobilenet_v2_fpn,
       'mobilenet_v2_fpn_sep_conv':
           center_net_mobilenet_v2_fpn_feature_extractor.mobilenet_v2_fpn,
+      
+      'mobilenet_v3_large_fpn':
+          center_net_mobilenet_v3_fpn_feature_extractor.mobilenet_v3_large_fpn,
+
+      'mobilenet_v3_small_fpn':
+          center_net_mobilenet_v3_fpn_feature_extractor.mobilenet_v3_small_fpn,
   }
 
   FEATURE_EXTRACTOR_MAPS = [
