@@ -315,7 +315,7 @@ def mobilenet_v3_small(batchnorm_training,
       conv_defs: Network layout to specify the mobilenet_v3 body. Default is
         `None` to use the default mobilenet_v3 network layout.
       **kwargs: Keyword arguments forwarded directly to the
-        `tf.keras.applications.MobilenetV2` method that constructs the Keras
+        `tf.keras.applications.MobilenetV3z` method that constructs the Keras
         model.
 
   Returns:
