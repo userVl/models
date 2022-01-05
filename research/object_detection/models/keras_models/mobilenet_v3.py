@@ -24,6 +24,7 @@ from object_detection.core import freezable_batch_norm
 from object_detection.models.keras_models import model_utils
 from object_detection.utils import ops
 
+from object_detection.models.keras_models import custom_keras_mobilenetv3
 
 # pylint: disable=invalid-name
 # This method copied from the slim mobilenet base network code (same license)
@@ -328,10 +329,19 @@ def mobilenet_v3_small(batchnorm_training,
       min_depth=min_depth,
       alpha=alpha,
       conv_defs=conv_defs)
-  return tf.keras.applications.MobileNetV3Small(alpha=alpha,
+
+  # Use the custom defined mobilenetv3 package instead of the one from keras
+  # This is because the custom one enables passing kwargs which are needed for
+  # overriding keras configs with the ones from object detection api
+  return custom_keras_mobilenetv3.MobileNetV3Small(alpha=alpha,
                                            layers=layers_override,
                                            include_preprocessing = False,
                                            **kwargs)
+#  return tf.keras.applications.MobileNetV3Small(alpha=alpha,
+#                                           layers=layers_override,
+#                                           include_preprocessing = False,
+#                                           **kwargs)
+
 # pylint: enable=invalid-name
 
 def mobilenet_v3_large(batchnorm_training,
