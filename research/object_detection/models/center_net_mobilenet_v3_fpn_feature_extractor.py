@@ -26,12 +26,15 @@ from object_detection.models.keras_models import mobilenet_v3 as mobilenetv3
 
 
 _MOBILENET_V3_LARGE_FPN_SKIP_LAYERS = [
-    'expanded_conv_1/depthwise', 'expanded_conv_3/depthwise', 'expanded_conv_6/depthwise', 'expanded_conv_12/depthwise'
+    'expanded_conv_2/Add', 'expanded_conv_5/Add', 'expanded_conv_9/Add', 'multiply_19'
 ]
+_NUM_FILTERS_LIST_LARGE = [80, 40, 24]
 
 _MOBILENET_V3_SMALL_FPN_SKIP_LAYERS = [
    'expanded_conv/squeeze_excite/Mul', 'expanded_conv_2/Add', 'expanded_conv_7/Add', 'multiply_17'
 ]
+
+_NUM_FILTERS_LIST_SMALL = [48, 24, 16]
 
 
 
@@ -41,6 +44,7 @@ class CenterNetMobileNetV3FPNFeatureExtractor(
 
   def __init__(self,
                mobilenet_v3_net,
+               is_small = False,
                channel_means=(0., 0., 0.),
                channel_stds=(1., 1., 1.),
                bgr_ordering=False,
@@ -71,25 +75,32 @@ class CenterNetMobileNetV3FPNFeatureExtractor(
 
     output = self._base_model(self._base_model.input)
 
+    skip_layer_names = _MOBILENET_V3_LARGE_FPN_SKIP_LAYERS
+    num_filters_list = _NUM_FILTERS_LIST_LARGE
+
+    if is_small:
+      skip_layer_names = _MOBILENET_V3_SMALL_FPN_SKIP_LAYERS
+      num_filters_list = _NUM_FILTERS_LIST_SMALL      
+
+
     # Add pyramid feature network on every layer that has stride 2.
     skip_outputs = [
         self._base_model.get_layer(skip_layer_name).output
-        for skip_layer_name in _MOBILENET_V3_SMALL_FPN_SKIP_LAYERS
+        for skip_layer_name in skip_layer_names
     ]
     self._fpn_model = tf.keras.models.Model(
         inputs=self._base_model.input, outputs=skip_outputs)
     fpn_outputs = self._fpn_model(self._base_model.input)
 
     # Construct the top-down feature maps -- we start with an output of
-    # 7x7x576, which we continually upsample, apply a residual on and merge.
-    # This results in a 56x56x16 output volume.
+    # 7x7x576 (small) or 7x7x960 (large), which we continually upsample, apply a residual on and merge.
+    # This results in a 56x56x16 (small) or 56x56x24 (large) output volume.
     top_layer = fpn_outputs[-1]
     # Use normal convolutional layer since the kernel_size is 1.
     residual_op = tf.keras.layers.Conv2D(
-        filters=48, kernel_size=1, strides=1, padding='same')
+        filters=num_filters_list[0], kernel_size=1, strides=1, padding='same')
     top_down = residual_op(top_layer)
 
-    num_filters_list = [48, 24, 16]
     for i, num_filters in enumerate(num_filters_list):
       level_ind = len(num_filters_list) - 1 - i
       # Upsample.
@@ -105,7 +116,7 @@ class CenterNetMobileNetV3FPNFeatureExtractor(
 
       # Merge.
       top_down = top_down + residual
-      next_num_filters = num_filters_list[i + 1] if i + 1 <= 2 else 16
+      next_num_filters = num_filters_list[i + 1] if i + 1 <= 2 else num_filters_list[-1]
       if use_separable_conv:
         conv = tf.keras.layers.SeparableConv2D(
             filters=next_num_filters, kernel_size=3, strides=1, padding='same')
@@ -162,7 +173,8 @@ def mobilenet_v3_large_fpn(channel_means, channel_stds, bgr_ordering,
       batchnorm_training=True,
       alpha=depth_multiplier,
       include_top=False,
-      weights='imagenet' if depth_multiplier == 1.0 else None)
+      weights = None)
+      #weights='imagenet' if depth_multiplier == 1.0 else None)
   return CenterNetMobileNetV3FPNFeatureExtractor(
       network,
       channel_means=channel_means,
@@ -186,6 +198,7 @@ def mobilenet_v3_small_fpn(channel_means, channel_stds, bgr_ordering,
       #weights='imagenet' if depth_multiplier == 1.0 else None)
   model = CenterNetMobileNetV3FPNFeatureExtractor(
       network,
+      is_small=True,
       channel_means=channel_means,
       channel_stds=channel_stds,
       bgr_ordering=bgr_ordering,
